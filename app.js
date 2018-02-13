@@ -27,6 +27,7 @@ app.use(function(req, res, next) {
 });
 
 passport.use(new LocalStrategy(User.authenticate()));
+
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
@@ -45,12 +46,13 @@ app.get("/register", function (req, res) {
 });
 
 app.post("/register", function (req, res) {
+  console.log(req);
   User.register(new User({
     userdata: {
-      firstName: req.body.user.firstName,
-      lastName: req.body.user.lastName,
-      phone: req.body.user.phone,
-      email: req.body.username,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      phone: req.body.phone,
+      email: req.body.username
     },
     username: req.body.username
   }), req.body.password, function(err, user){
