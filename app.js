@@ -1,93 +1,88 @@
-var express               = require("express"),
-    mongoose              = require("mongoose"),
-    passport              = require("passport"),
-    bodyParser            = require("body-parser"),
-    User                  = require("./models/user"),
-    LocalStrategy         = require("passport-local"),
-    passportLocalMongoose = require("passport-local-mongoose")
+var express             = require('express'),
+    path                = require('path'),
+    cookieParser        = require('cookie-parser'),
+    bodyParser          = require('body-parser'),
+    exphbs              = require('express-handlebars'),
+    expressValidator    = require('express-validator'),
+    flash               = require('connect-flash'),
+    session             = require('express-session'),
+    passport            = require('passport'),
+    LocalStrategy       = require('passport-local').Strategy,
+    mongo               = require('mongodb'),
+    mongoose            = require('mongoose');
 
+// Database Connection
 mongoose.connect("mongodb://localhost/auth");
+var db = mongoose.connection;
 
+// Routes setup
+var routes              = require('./routes/index'),
+    users               = require('./routes/users');
+
+// Initialize App
 var app = express();
-app.set("view engine", "ejs");
 
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(require("express-session")({
-  secret: "Best Security Secret Goes Here!",
-  resave: false,
-  saveUninitialized: false
-}))
+// Setting up View Engine
+app.set('views', path.join(__dirname, 'views'));
+app.engine('handlebars', exphbs({ defaultLayout: 'layout' }));
+app.set('view engine', 'handlebars');
+
+// BodyParser Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+
+// Set Static Folder to public
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Express Session
+app.use(session({
+  secret: 'secret',
+  saveUninitialized: true,
+  resave: true
+}));
+
+// Passport initialization
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', "*");
-  res.header('Access-Control-Allow-Methods', 'GET,POST');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+// Express Validator
+app.use(expressValidator({
+  errorFormatter: function (param, msg, value) {
+    var namespace = param.split('.')
+      , root = namespace.shift()
+      , formParam = root;
+
+    while (namespace.length) {
+      formParam += '[' + namespace.shift() + ']';
+    }
+    return {
+      param: formParam,
+      msg: msg,
+      value: value
+    };
+  }
+}));
+
+// Flash Connection
+app.use(flash());
+
+// Global Vars
+app.use(function (req, res, next) {
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  res.locals.error = req.flash('error');
+  res.locals.user = req.user || null;
   next();
 });
 
-passport.use(new LocalStrategy(User.authenticate()));
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+app.use('/', routes);
+app.use('/users', users);
 
-//ROUTES
-app.get("/", function(req, res) {
-  res.render("home");
-});
+// Set Port
+app.set('port', (process.env.PORT || 3000));
 
-app.get("/secret", isLoggedIn, function (req, res) {
-  res.render("secret");
-});
-
-//AUTH ROUTES
-app.get("/register", function (req, res) {
-  res.render("register");
-});
-
-app.post("/register", function (req, res) {
-  console.log(req);
-  User.register(new User({
-    userdata: {
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      phone: req.body.phone,
-      email: req.body.username
-    },
-    username: req.body.username
-  }), req.body.password, function(err, user){
-    if(err) {
-      console.log(err);
-      return res.render('register');
-    }
-    passport.authenticate("local")(req, res, function() {
-      res.redirect("/secret");
-    });
-  });
-});
-
-app.get("/login", function (req, res) {
-  res.render("login");
-});
-
-app.post("/login", passport.authenticate("local", {
-  successRedirect: "/secret",
-  failureRedirect: "/login"
-}), function(req, res) {
-});
-
-function isLoggedIn(req, res, next) {
-  if(req.isAuthenticated()){
-    return next();
-  }
-  res.redirect("/login");
-}
-
-app.get("/logout", function (req, res) {
-  req.logout();
-  res.redirect("/");
-});
-
-app.listen(3000, function(){
-  console.log("Server started!!!");
+app.listen(app.get('port'), function () {
+  console.log('Server started on port ' + app.get('port'));
 });
