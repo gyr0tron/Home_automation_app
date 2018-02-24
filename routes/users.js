@@ -32,13 +32,18 @@ router.post('/register', function (req, res) {
       req.checkBody('email', 'Email is not valid').isEmail();
       req.checkBody('password', 'Password is required').notEmpty();
       req.checkBody('password_confirm', 'Passwords do not match').equals(req.body.password);
-
   var errors = req.validationErrors();
 
   if (errors) {
-    res.render('register', {
-      errors: errors
-    });
+    // res.render('register', {
+    //   errors: errors
+    // });
+    var output = {
+      error_msg: "Something went wrong!",
+      errors
+    };
+
+    res.send(output);
   } else {
     var newUser = new User({
       firstName: firstName,
@@ -53,10 +58,12 @@ router.post('/register', function (req, res) {
       if (err) throw err;
       console.log(user);
     });
-
-    req.flash('success_msg', 'You are registered and can now login');
-
-    res.redirect('/users/login');
+    var output = {
+      success_msg: "You are registered and can now login"
+    };
+    // req.flash('success_msg', 'You are registered and can now login');
+    res.send(output);
+    // res.redirect('/users/login');
   }
 });
 
