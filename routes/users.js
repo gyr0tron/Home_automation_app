@@ -122,7 +122,7 @@ function generateToken(req, res, next) {
   req.token = jwt.sign({
     id: req.user.id,
   }, 'server secret', {
-      expiresIn: 240
+      expiresIn: 604800
     });
   next();
 }
