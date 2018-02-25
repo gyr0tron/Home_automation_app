@@ -1,5 +1,6 @@
 var express             = require('express'),
     path                = require('path'),
+    cors                = require('cors');
     cookieParser        = require('cookie-parser'),
     bodyParser          = require('body-parser'),
     exphbs              = require('express-handlebars'),
@@ -8,12 +9,13 @@ var express             = require('express'),
     session             = require('express-session'),
     passport            = require('passport'),
     LocalStrategy       = require('passport-local').Strategy,
+    jwt                 = require('jsonwebtoken');
     mongo               = require('mongodb'),
     mongoose            = require('mongoose');
 
 // Database Connection
 mongoose.connect("mongodb://localhost/auth");
-var db = mongoose.connection;
+var db                  = mongoose.connection;
 
 // Routes setup
 var routes              = require('./routes/index'),
@@ -21,6 +23,7 @@ var routes              = require('./routes/index'),
 
 // Initialize App
 var app = express();
+app.use(cors());
 
 // Setting up View Engine
 app.set('views', path.join(__dirname, 'views'));
@@ -36,11 +39,11 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Express Session
-app.use(session({
-  secret: 'Super Secret',
-  saveUninitialized: true,
-  resave: true
-}));
+// app.use(session({
+//   secret: 'Super Secret',
+//   saveUninitialized: true,
+//   resave: true
+// }));
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', "*");
   res.header('Access-Control-Allow-Methods', 'GET,POST');
@@ -50,7 +53,7 @@ app.use(function (req, res, next) {
 
 // Passport initialization
 app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.session());
 
 // Express Validator
 app.use(expressValidator({
@@ -71,16 +74,16 @@ app.use(expressValidator({
 }));
 
 // Flash Connection
-app.use(flash());
+// app.use(flash());
 
 // Global Vars
-app.use(function (req, res, next) {
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg = req.flash('error_msg');
-  res.locals.error = req.flash('error');
-  res.locals.user = req.user || null;
-  next();
-});
+// app.use(function (req, res, next) {
+//   res.locals.success_msg = req.flash('success_msg');
+//   res.locals.error_msg = req.flash('error_msg');
+//   res.locals.error = req.flash('error');
+//   res.locals.user = req.user || null;
+//   next();
+// });
 
 
 app.use('/', routes);

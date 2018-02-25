@@ -2,8 +2,13 @@ var express = require('express');
 var router = express.Router();
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
-
+var jwt = require('jsonwebtoken');
 var User = require('../models/user');
+var mongo = require('mongodb');
+var mongoose = require('mongoose');
+
+mongoose.connect("mongodb://localhost/auth");
+var db = mongoose.connection;
 
 // Register
 router.get('/register', function (req, res) {
@@ -85,28 +90,54 @@ passport.use(new LocalStrategy(function (username, password, done) {
   });
 }));
 
-passport.serializeUser(function (user, done) {
-  done(null, user.id);
-});
+// passport.serializeUser(function (user, done) {
+//   done(null, user.id);
+// });
 
-passport.deserializeUser(function (id, done) {
-  User.getUserById(id, function (err, user) {
-    done(err, user);
+// passport.deserializeUser(function (id, done) {
+//   User.getUserById(id, function (err, user) {
+//     done(err, user);
+//   });
+// });
+
+router.post('/login', passport.authenticate('local', { session: false }), serialize, generateToken, respond
+// function (req, res) {
+//   res.send(req.flash());
+// }
+);
+
+function serialize(req, res, next) {
+  console.log('req.user: ', req.user);
+  User.create(req.user, function (err, user) {
+    if (err) { return next(err); }
+    // we store the updated information in req.user again
+    req.user = {
+      id: user.id
+    };
+    next();
   });
-});
+}
 
-router.post('/login', passport.authenticate('local', { 
-  successRedirect: '/', 
-  failureRedirect: '/users/login', 
-  failureFlash: true }), function (req, res) {
-  res.redirect('/');
-});
+function generateToken(req, res, next) {
+  req.token = jwt.sign({
+    id: req.user.id,
+  }, 'server secret', {
+      expiresIn: 240
+    });
+  next();
+}
 
+function respond(req, res) {
+  res.status(200).json({
+    user: req.user,
+    token: req.token
+  });
+}
 
 router.get('/logout', function (req, res) {
   req.logout();
 
-  req.flash('success_msg', 'You are logged out');
+  // req.flash('success_msg', 'You are logged out');
 
   res.redirect('/users/login');
 });
